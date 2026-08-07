@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum EventStatus {
+  draft
+  active
+  closed
+}
+
+model Event {
+  id        String      @id @default(cuid())
+  name      String
+  status    EventStatus @default(draft)
+  createdAt DateTime    @default(now())
+  startedAt DateTime?
+  closedAt  DateTime?
+
+  teams  Team[]
+  jurors Juror[]
+}
+
+model Team {
+  id         String  @id @default(cuid())
+  eventId    String
+  event      Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name       String
+  token      String  @unique @default(cuid())
+  manualRank Int?
+
+  jurorScoresReceived JurorScore[] @relation("TeamReceivesJurorScore")
+  teamScoresGiven     TeamScore[]  @relation("TeamGivesScore")
+  teamScoresReceived  TeamScore[]  @relation("TeamReceivesScore")
+
+  @@unique([eventId, name])
+}
+
+model Juror {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name    String
+  token   String @unique @default(cuid())
+
+  scores JurorScore[]
+
+  @@unique([eventId, name])
+}
+
+// A juror's score (0-100) for one team.
+model JurorScore {
+  id       String @id @default(cuid())
+  jurorId  String
+  juror    Juror  @relation(fields: [jurorId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team   @relation("TeamReceivesJurorScore", fields: [teamId], references: [id], onDelete: Cascade)
+  score    Int
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([jurorId, teamId])
+}
+
+// Points (0-20) one team assigns to another team, out of a 50-point budget.
+model TeamScore {
+  id         String @id @default(cuid())
+  fromTeamId String
+  fromTeam   Team   @relation("TeamGivesScore", fields: [fromTeamId], references: [id], onDelete: Cascade)
+  toTeamId   String
+  toTeam     Team   @relation("TeamReceivesScore", fields: [toTeamId], references: [id], onDelete: Cascade)
+  score      Int
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([fromTeamId, toTeamId])
+}
