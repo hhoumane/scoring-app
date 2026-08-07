@@ -3,12 +3,23 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Migrations need a direct (non-pooled) connection — a pooled connection
+// (e.g. through PgBouncer) can't take the advisory lock Prisma uses to
+// serialize migrations, and `prisma migrate deploy` times out with P1002.
+// Prefer DATABASE_URL (set locally, or manually in Vercel), but fall back to
+// POSTGRES_URL_NON_POOLING, which Vercel's Postgres integration sets
+// automatically without any manual configuration.
+const databaseUrl =
+  process.env["DATABASE_URL"] ??
+  process.env["POSTGRES_URL_NON_POOLING"] ??
+  process.env["POSTGRES_URL"];
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: databaseUrl,
   },
 });
