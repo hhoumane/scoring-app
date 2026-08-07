@@ -14,20 +14,20 @@ type JuryData = {
 
 const inputKey = (teamId: string, criterionId: string) => `${teamId}:${criterionId}`;
 
-function computeWeightedTotal(
+function computeCriteriaTotal(
   teamId: string,
   criteria: Criterion[],
   inputs: Record<string, string>
 ): number | null {
-  let weighted = 0;
+  let total = 0;
   for (const c of criteria) {
     const raw = inputs[inputKey(teamId, c.id)];
     if (raw === undefined || raw === "") return null;
     const value = Number(raw);
-    if (!Number.isInteger(value) || value < 0 || value > 100) return null;
-    weighted += (value * c.percentage) / 100;
+    if (!Number.isInteger(value) || value < 0 || value > c.percentage) return null;
+    total += value;
   }
-  return Math.round(weighted);
+  return total;
 }
 
 export default function JuryPage({
@@ -73,7 +73,7 @@ export default function JuryPage({
         ? data.teams
             .map((t) => ({
               teamId: t.id,
-              score: computeWeightedTotal(t.id, data.criteria, criteriaInputs),
+              score: computeCriteriaTotal(t.id, data.criteria, criteriaInputs),
             }))
             .filter((e): e is { teamId: string; score: number } => e.score !== null)
         : Object.entries(legacyScores)
@@ -119,12 +119,12 @@ export default function JuryPage({
       </h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
         {hasCriteria
-          ? "Score each team on every criterion below — the weighted total is calculated for you."
+          ? "Score each team on every criterion below (each criterion is scored out of its own percentage) — the total is calculated for you."
           : "Give each team a score out of 100."}
       </p>
       {hasCriteria && (
         <p className="mt-1 text-xs text-zinc-500">
-          {data.criteria.map((c) => `${c.name} (${c.percentage}%)`).join(" · ")}
+          {data.criteria.map((c) => `${c.name} (out of ${c.percentage})`).join(" · ")}
         </p>
       )}
 
@@ -160,7 +160,7 @@ export default function JuryPage({
             );
           }
 
-          const total = computeWeightedTotal(team.id, data.criteria, criteriaInputs);
+          const total = computeCriteriaTotal(team.id, data.criteria, criteriaInputs);
           return (
             <div
               key={team.id}
@@ -182,12 +182,12 @@ export default function JuryPage({
                 {data.criteria.map((c) => (
                   <div key={c.id} className="flex items-center justify-between gap-3">
                     <label className="text-sm text-zinc-700 dark:text-zinc-300">
-                      {c.name} <span className="text-zinc-500">({c.percentage}%)</span>
+                      {c.name} <span className="text-zinc-500">(out of {c.percentage})</span>
                     </label>
                     <input
                       type="number"
                       min={0}
-                      max={100}
+                      max={c.percentage}
                       disabled={locked}
                       value={criteriaInputs[inputKey(team.id, c.id)] ?? ""}
                       onChange={(e) =>
