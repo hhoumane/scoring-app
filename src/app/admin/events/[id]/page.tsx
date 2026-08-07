@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Team = { id: string; name: string; token: string; manualRank: number | null };
 type Juror = { id: string; name: string; token: string };
@@ -57,6 +58,7 @@ export default function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [data, setData] = useState<BreakdownData | null>(null);
   const [error, setError] = useState("");
   const [teamName, setTeamName] = useState("");
@@ -143,6 +145,24 @@ export default function EventDetailPage({
       return;
     }
     load();
+  }
+
+  async function deleteEvent() {
+    if (
+      !data ||
+      !confirm(
+        `Delete "${data.event.name}"? This permanently removes its teams, jurors, and all scores.`
+      )
+    )
+      return;
+    setError("");
+    const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      setError(json?.error ?? "Something went wrong.");
+      return;
+    }
+    router.push("/admin");
   }
 
   async function saveScoringSettings(e: React.FormEvent) {
@@ -260,6 +280,12 @@ export default function EventDetailPage({
             Close voting
           </button>
         )}
+        <button
+          onClick={deleteEvent}
+          className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950"
+        >
+          Delete event
+        </button>
       </div>
 
       <div className="mt-6 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800">

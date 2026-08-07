@@ -37,6 +37,22 @@ export default function AdminPage() {
     load();
   }, []);
 
+  async function deleteEvent(ev: EventSummary) {
+    if (
+      !confirm(
+        `Delete "${ev.name}"? This permanently removes its teams, jurors, and all scores.`
+      )
+    )
+      return;
+    const res = await fetch(`/api/events/${ev.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error ?? "Something went wrong.");
+      return;
+    }
+    load();
+  }
+
   async function createEvent(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
@@ -127,23 +143,30 @@ export default function AdminPage() {
           <p className="text-sm text-zinc-500">No events yet. Create one above.</p>
         )}
         {events?.map((ev) => (
-          <Link
+          <div
             key={ev.id}
-            href={`/admin/events/${ev.id}`}
             className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
           >
-            <div>
+            <Link href={`/admin/events/${ev.id}`} className="flex-1">
               <p className="font-medium text-zinc-900 dark:text-zinc-50">{ev.name}</p>
               <p className="text-xs text-zinc-500">
                 {ev._count.teams} teams · {ev._count.jurors} jurors
               </p>
+            </Link>
+            <div className="flex items-center gap-3">
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[ev.status]}`}
+              >
+                {ev.status}
+              </span>
+              <button
+                onClick={() => deleteEvent(ev)}
+                className="text-xs font-medium text-red-600 hover:text-red-700"
+              >
+                Delete
+              </button>
             </div>
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[ev.status]}`}
-            >
-              {ev.status}
-            </span>
-          </Link>
+          </div>
         ))}
       </div>
     </div>
