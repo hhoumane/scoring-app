@@ -18,7 +18,7 @@ type Ranked = {
   id: string;
   name: string;
   avgJurorScore: number;
-  totalTeamScore: number;
+  avgTeamScore: number;
   finalScore: number;
   rank: number;
   tied: boolean;
@@ -187,7 +187,7 @@ export default function LiveScreenPage({
                   {t.finalScore.toFixed(2)}
                 </span>
                 <span className="block text-sm text-zinc-500">
-                  jury {t.avgJurorScore.toFixed(1)} + teams {t.totalTeamScore}
+                  jury {t.avgJurorScore.toFixed(1)} · teams {t.avgTeamScore.toFixed(1)}
                 </span>
               </span>
             </li>

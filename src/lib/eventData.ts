@@ -19,16 +19,16 @@ export async function getEventBreakdown(eventId: string) {
   if (!event) return null;
 
   const jurorScoresByTeam = new Map<string, number[]>();
-  const teamScoreTotalsByTeam = new Map<string, number>();
+  const teamScoresByTeam = new Map<string, number[]>();
 
   for (const team of event.teams) {
     jurorScoresByTeam.set(
       team.id,
       team.jurorScoresReceived.map((s) => s.score)
     );
-    teamScoreTotalsByTeam.set(
+    teamScoresByTeam.set(
       team.id,
-      team.teamScoresReceived.reduce((sum, s) => sum + s.score, 0)
+      team.teamScoresReceived.map((s) => s.score)
     );
   }
 
@@ -39,7 +39,9 @@ export async function getEventBreakdown(eventId: string) {
       manualRank: t.manualRank,
     })),
     jurorScoresByTeam,
-    teamScoreTotalsByTeam
+    teamScoresByTeam,
+    event.juryWeight,
+    event.teamScoreMaxPerTeam
   );
 
   const jurorCompletion = event.jurors.map((juror) => ({

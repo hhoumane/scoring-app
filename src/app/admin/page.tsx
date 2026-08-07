@@ -23,6 +23,7 @@ export default function AdminPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [teamScoreBudget, setTeamScoreBudget] = useState("50");
   const [teamScoreMaxPerTeam, setTeamScoreMaxPerTeam] = useState("20");
+  const [juryWeight, setJuryWeight] = useState("70");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,6 +66,7 @@ export default function AdminPage() {
         name,
         teamScoreBudget: Number(teamScoreBudget),
         teamScoreMaxPerTeam: Number(teamScoreMaxPerTeam),
+        juryWeight: Number(juryWeight),
       }),
     });
     const data = await res.json();
@@ -127,6 +129,17 @@ export default function AdminPage() {
                 min={1}
                 value={teamScoreMaxPerTeam}
                 onChange={(e) => setTeamScoreMaxPerTeam(e.target.value)}
+                className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Jury weight % (teams get the rest)
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={juryWeight}
+                onChange={(e) => setJuryWeight(e.target.value)}
                 className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
             </label>

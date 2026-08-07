@@ -12,6 +12,7 @@ type Event = {
   status: "draft" | "active" | "closed";
   teamScoreBudget: number;
   teamScoreMaxPerTeam: number;
+  juryWeight: number;
   teams: Team[];
   jurors: Juror[];
   criteria: Criterion[];
@@ -20,7 +21,7 @@ type RankedTeam = {
   id: string;
   name: string;
   avgJurorScore: number;
-  totalTeamScore: number;
+  avgTeamScore: number;
   finalScore: number;
   rank: number;
   tied: boolean;
@@ -67,6 +68,7 @@ export default function EventDetailPage({
   const [editingSettings, setEditingSettings] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
   const [maxPerTeamInput, setMaxPerTeamInput] = useState("");
+  const [juryWeightInput, setJuryWeightInput] = useState("");
   const [criterionName, setCriterionName] = useState("");
   const [criterionPercentage, setCriterionPercentage] = useState("");
 
@@ -174,6 +176,7 @@ export default function EventDetailPage({
       body: JSON.stringify({
         teamScoreBudget: Number(budgetInput),
         teamScoreMaxPerTeam: Number(maxPerTeamInput),
+        juryWeight: Number(juryWeightInput),
       }),
     });
     const json = await res.json();
@@ -302,13 +305,16 @@ export default function EventDetailPage({
             <p className="text-zinc-700 dark:text-zinc-300">
               Team scoring: each team shares{" "}
               <span className="font-medium">{event.teamScoreBudget} points</span>, up to{" "}
-              <span className="font-medium">{event.teamScoreMaxPerTeam}</span> per team.
+              <span className="font-medium">{event.teamScoreMaxPerTeam}</span> per team. Final
+              score: <span className="font-medium">{event.juryWeight}% jury</span> /{" "}
+              <span className="font-medium">{100 - event.juryWeight}% teams</span>.
             </p>
             {event.status === "draft" && (
               <button
                 onClick={() => {
                   setBudgetInput(String(event.teamScoreBudget));
                   setMaxPerTeamInput(String(event.teamScoreMaxPerTeam));
+                  setJuryWeightInput(String(event.juryWeight));
                   setEditingSettings(true);
                 }}
                 className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -336,6 +342,17 @@ export default function EventDetailPage({
                 min={1}
                 value={maxPerTeamInput}
                 onChange={(e) => setMaxPerTeamInput(e.target.value)}
+                className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Jury weight % (teams get the rest)
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={juryWeightInput}
+                onChange={(e) => setJuryWeightInput(e.target.value)}
                 className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
             </label>
@@ -522,8 +539,8 @@ export default function EventDetailPage({
             <tr className="border-b border-zinc-200 text-xs uppercase text-zinc-500 dark:border-zinc-800">
               <th className="py-2 pr-2">Rank</th>
               <th className="py-2 pr-2">Team</th>
-              <th className="py-2 pr-2">Avg juror score</th>
-              <th className="py-2 pr-2">Team points</th>
+              <th className="py-2 pr-2">Avg jury score ({event.juryWeight}%)</th>
+              <th className="py-2 pr-2">Avg team score ({100 - event.juryWeight}%)</th>
               <th className="py-2 pr-2">Final score</th>
             </tr>
           </thead>
@@ -540,7 +557,9 @@ export default function EventDetailPage({
                 </td>
                 <td className="py-2 pr-2">{t.name}</td>
                 <td className="py-2 pr-2">{t.avgJurorScore.toFixed(2)}</td>
-                <td className="py-2 pr-2">{t.totalTeamScore}</td>
+                <td className="py-2 pr-2">
+                  {t.avgTeamScore.toFixed(2)}/{event.teamScoreMaxPerTeam}
+                </td>
                 <td className="py-2 pr-2 font-semibold">{t.finalScore.toFixed(2)}</td>
               </tr>
             ))}

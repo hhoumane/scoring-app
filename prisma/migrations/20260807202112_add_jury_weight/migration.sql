@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Event" ADD COLUMN     "juryWeight" INTEGER NOT NULL DEFAULT 70;

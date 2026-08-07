@@ -93,6 +93,7 @@ export default function TeamPage({
 
   const locked = data.event.status !== "active";
   const over = remaining < 0;
+  const incomplete = remaining !== 0;
 
   return (
     <div className="mx-auto w-full max-w-md flex-1 px-6 py-12">
@@ -101,8 +102,8 @@ export default function TeamPage({
         {data.team.name}
       </h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        You have {budget} points to distribute among other teams, up to {maxPerTeam} points
-        per team.
+        Distribute all {budget} points among the other teams, up to {maxPerTeam} points
+        per team. You must use your entire budget to submit.
       </p>
 
       {locked && (
@@ -115,9 +116,17 @@ export default function TeamPage({
 
       {!locked && (
         <p
-          className={`mt-4 text-sm font-medium ${over ? "text-red-600" : "text-zinc-700 dark:text-zinc-300"}`}
+          className={`mt-4 text-sm font-medium ${
+            over
+              ? "text-red-600"
+              : incomplete
+                ? "text-amber-600"
+                : "text-green-600"
+          }`}
         >
-          {remaining} of {budget} points remaining
+          {remaining === 0
+            ? "All points assigned — ready to submit."
+            : `${remaining} of ${budget} points remaining`}
         </p>
       )}
 
@@ -148,7 +157,7 @@ export default function TeamPage({
       {!locked && (
         <button
           onClick={save}
-          disabled={status === "saving" || over}
+          disabled={status === "saving" || incomplete}
           className="mt-6 w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
         >
           {status === "saving" ? "Saving…" : "Save scores"}

@@ -3,6 +3,7 @@ export const JUROR_SCORE_MAX = 100;
 
 export const DEFAULT_TEAM_SCORE_BUDGET = 50;
 export const DEFAULT_TEAM_SCORE_MAX_PER_TARGET = 20;
+export const DEFAULT_JURY_WEIGHT = 70;
 
 export function isValidJurorScore(score: number): boolean {
   return (
@@ -16,7 +17,11 @@ export function isValidTeamScoreValue(score: number, maxPerTarget: number): bool
   return Number.isInteger(score) && score >= 0 && score <= maxPerTarget;
 }
 
-export type TeamScoreSettings = { teamScoreBudget: number; teamScoreMaxPerTeam: number };
+export type TeamScoreSettings = {
+  teamScoreBudget: number;
+  teamScoreMaxPerTeam: number;
+  juryWeight: number;
+};
 
 export type TeamScoreSettingsResult =
   | { ok: true; settings: TeamScoreSettings }
@@ -24,10 +29,11 @@ export type TeamScoreSettingsResult =
 
 /** Validates organizer-supplied team-scoring settings, falling back to `fallback` when omitted. */
 export function parseTeamScoreSettings(
-  input: { teamScoreBudget?: unknown; teamScoreMaxPerTeam?: unknown },
+  input: { teamScoreBudget?: unknown; teamScoreMaxPerTeam?: unknown; juryWeight?: unknown },
   fallback: TeamScoreSettings = {
     teamScoreBudget: DEFAULT_TEAM_SCORE_BUDGET,
     teamScoreMaxPerTeam: DEFAULT_TEAM_SCORE_MAX_PER_TARGET,
+    juryWeight: DEFAULT_JURY_WEIGHT,
   }
 ): TeamScoreSettingsResult {
   const budget =
@@ -36,6 +42,8 @@ export function parseTeamScoreSettings(
     input.teamScoreMaxPerTeam === undefined
       ? fallback.teamScoreMaxPerTeam
       : input.teamScoreMaxPerTeam;
+  const juryWeight =
+    input.juryWeight === undefined ? fallback.juryWeight : input.juryWeight;
 
   if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 1) {
     return { ok: false, error: "Team point budget must be a positive integer." };
@@ -49,8 +57,19 @@ export function parseTeamScoreSettings(
       error: "Max points per team cannot be greater than the total point budget.",
     };
   }
+  if (
+    typeof juryWeight !== "number" ||
+    !Number.isInteger(juryWeight) ||
+    juryWeight < 0 ||
+    juryWeight > 100
+  ) {
+    return { ok: false, error: "Jury weight must be an integer between 0 and 100." };
+  }
 
-  return { ok: true, settings: { teamScoreBudget: budget, teamScoreMaxPerTeam: maxPerTeam } };
+  return {
+    ok: true,
+    settings: { teamScoreBudget: budget, teamScoreMaxPerTeam: maxPerTeam, juryWeight },
+  };
 }
 
 export type TeamScoreEntry = { toTeamId: string; score: number };
@@ -91,10 +110,10 @@ export function validateTeamScoreSubmission(
     total += entry.score;
   }
 
-  if (total > budget) {
+  if (total !== budget) {
     return {
       ok: false,
-      error: `Total assigned points cannot exceed ${budget}.`,
+      error: `You must assign your entire ${budget}-point budget (currently ${total}).`,
     };
   }
 
@@ -111,7 +130,7 @@ export type RankedTeam = {
   id: string;
   name: string;
   avgJurorScore: number;
-  totalTeamScore: number;
+  avgTeamScore: number;
   finalScore: number;
   rank: number;
   tied: boolean;
@@ -119,28 +138,36 @@ export type RankedTeam = {
 };
 
 /**
- * Final score = average score assigned by jurors + total score assigned by other teams.
+ * Final score = juryWeight% of the jury average (0-100) plus the remaining
+ * weight applied to the participants' average, normalized from its
+ * 0-maxPerTeam scale to 0-100 so the weights mean what they say.
  * Ties (identical finalScore) share a rank unless a manualRank has been set by the
  * organizer to break the tie, in which case manualRank takes precedence for ordering.
  */
 export function computeRanking(
   teams: RankableTeam[],
   jurorScoresByTeam: Map<string, number[]>,
-  teamScoreTotalsByTeam: Map<string, number>
+  teamScoresByTeam: Map<string, number[]>,
+  juryWeight: number,
+  teamScoreMaxPerTeam: number
 ): RankedTeam[] {
+  const average = (values: number[]) =>
+    values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+
   const scored = teams.map((team) => {
-    const jurorScores = jurorScoresByTeam.get(team.id) ?? [];
-    const avgJurorScore =
-      jurorScores.length > 0
-        ? jurorScores.reduce((a, b) => a + b, 0) / jurorScores.length
-        : 0;
-    const totalTeamScore = teamScoreTotalsByTeam.get(team.id) ?? 0;
+    const avgJurorScore = average(jurorScoresByTeam.get(team.id) ?? []);
+    const avgTeamScore = average(teamScoresByTeam.get(team.id) ?? []);
+    const normalizedTeamScore =
+      teamScoreMaxPerTeam > 0 ? (avgTeamScore / teamScoreMaxPerTeam) * 100 : 0;
+    const finalScore =
+      (juryWeight / 100) * avgJurorScore +
+      ((100 - juryWeight) / 100) * normalizedTeamScore;
     return {
       id: team.id,
       name: team.name,
       avgJurorScore,
-      totalTeamScore,
-      finalScore: avgJurorScore + totalTeamScore,
+      avgTeamScore,
+      finalScore,
       manualRank: team.manualRank,
     };
   });

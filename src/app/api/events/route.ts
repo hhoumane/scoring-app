@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   const settings = parseTeamScoreSettings({
     teamScoreBudget: body?.teamScoreBudget,
     teamScoreMaxPerTeam: body?.teamScoreMaxPerTeam,
+    juryWeight: body?.juryWeight,
   });
   if (!settings.ok) {
     return NextResponse.json({ error: settings.error }, { status: 400 });

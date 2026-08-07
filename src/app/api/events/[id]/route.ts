@@ -37,8 +37,13 @@ export async function PATCH(
     {
       teamScoreBudget: body?.teamScoreBudget,
       teamScoreMaxPerTeam: body?.teamScoreMaxPerTeam,
+      juryWeight: body?.juryWeight,
     },
-    { teamScoreBudget: event.teamScoreBudget, teamScoreMaxPerTeam: event.teamScoreMaxPerTeam }
+    {
+      teamScoreBudget: event.teamScoreBudget,
+      teamScoreMaxPerTeam: event.teamScoreMaxPerTeam,
+      juryWeight: event.juryWeight,
+    }
   );
   if (!settings.ok) {
     return NextResponse.json({ error: settings.error }, { status: 400 });

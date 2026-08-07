@@ -26,6 +26,17 @@ export async function POST(
       { status: 409 }
     );
   }
+  const maxSpendable = event.teamScoreMaxPerTeam * (event._count.teams - 1);
+  if (event.teamScoreBudget > maxSpendable) {
+    return NextResponse.json(
+      {
+        error: `Teams must spend their full ${event.teamScoreBudget}-point budget, but with ${
+          event._count.teams - 1
+        } other team(s) at max ${event.teamScoreMaxPerTeam} points each they can only spend ${maxSpendable}. Adjust the team scoring settings or add more teams.`,
+      },
+      { status: 409 }
+    );
+  }
   const criteriaTotal = event.criteria.reduce((sum, c) => sum + c.percentage, 0);
   if (event.criteria.length < 1 || criteriaTotal !== 100) {
     return NextResponse.json(

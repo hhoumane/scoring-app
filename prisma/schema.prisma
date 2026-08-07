@@ -29,6 +29,10 @@ model Event {
   teamScoreBudget     Int @default(50)
   teamScoreMaxPerTeam Int @default(20)
 
+  // Share (%) of the final score that comes from the jury average; the
+  // participants' average carries the remaining 100 - juryWeight.
+  juryWeight Int @default(70)
+
   teams    Team[]
   jurors   Juror[]
   criteria Criterion[]
