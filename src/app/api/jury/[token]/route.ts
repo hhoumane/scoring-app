@@ -10,7 +10,12 @@ export async function GET(
   const juror = await prisma.juror.findUnique({
     where: { token },
     include: {
-      event: { include: { teams: { orderBy: { name: "asc" } } } },
+      event: {
+        include: {
+          teams: { orderBy: { name: "asc" } },
+          criteria: { orderBy: { createdAt: "asc" } },
+        },
+      },
       scores: true,
     },
   });
@@ -27,6 +32,7 @@ export async function GET(
     juror: { id: juror.id, name: juror.name },
     event: { id: juror.event.id, name: juror.event.name, status: juror.event.status },
     teams: juror.event.teams.map((t) => ({ id: t.id, name: t.name })),
+    criteria: juror.event.criteria.map((c) => ({ id: c.id, name: c.name, percentage: c.percentage })),
     scores: scoresByTeamId,
   });
 }

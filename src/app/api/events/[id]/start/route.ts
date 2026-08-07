@@ -9,7 +9,7 @@ export async function POST(
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { _count: { select: { teams: true, jurors: true } } },
+    include: { _count: { select: { teams: true, jurors: true } }, criteria: true },
   });
   if (!event) {
     return NextResponse.json({ error: "Event not found." }, { status: 404 });
@@ -23,6 +23,18 @@ export async function POST(
   if (event._count.teams < 1 || event._count.jurors < 1) {
     return NextResponse.json(
       { error: "Add at least one team and one juror before starting." },
+      { status: 409 }
+    );
+  }
+  const criteriaTotal = event.criteria.reduce((sum, c) => sum + c.percentage, 0);
+  if (event.criteria.length < 1 || criteriaTotal !== 100) {
+    return NextResponse.json(
+      {
+        error:
+          event.criteria.length < 1
+            ? "Add at least one judging criterion before starting."
+            : `Judging criteria percentages must add up to 100 (currently ${criteriaTotal}).`,
+      },
       { status: 409 }
     );
   }

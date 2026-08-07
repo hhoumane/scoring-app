@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 
 type Team = { id: string; name: string; token: string; manualRank: number | null };
 type Juror = { id: string; name: string; token: string };
+type Criterion = { id: string; name: string; percentage: number };
 type Event = {
   id: string;
   name: string;
@@ -12,6 +13,7 @@ type Event = {
   teamScoreMaxPerTeam: number;
   teams: Team[];
   jurors: Juror[];
+  criteria: Criterion[];
 };
 type RankedTeam = {
   id: string;
@@ -63,6 +65,8 @@ export default function EventDetailPage({
   const [editingSettings, setEditingSettings] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
   const [maxPerTeamInput, setMaxPerTeamInput] = useState("");
+  const [criterionName, setCriterionName] = useState("");
+  const [criterionPercentage, setCriterionPercentage] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/events/${id}`);
@@ -158,6 +162,41 @@ export default function EventDetailPage({
       return;
     }
     setEditingSettings(false);
+    load();
+  }
+
+  async function addCriterion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!criterionName.trim() || !criterionPercentage) return;
+    setError("");
+    const res = await fetch(`/api/events/${id}/criteria`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: criterionName,
+        percentage: Number(criterionPercentage),
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setError(json.error);
+      return;
+    }
+    setCriterionName("");
+    setCriterionPercentage("");
+    load();
+  }
+
+  async function removeCriterion(criterionId: string) {
+    setError("");
+    const res = await fetch(`/api/events/${id}/criteria/${criterionId}`, {
+      method: "DELETE",
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setError(json.error);
+      return;
+    }
     load();
   }
 
@@ -282,6 +321,81 @@ export default function EventDetailPage({
           </form>
         )}
       </div>
+
+      <section className="mt-6 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Judging criteria
+          </h2>
+          {(() => {
+            const total = event.criteria.reduce((sum, c) => sum + c.percentage, 0);
+            return (
+              <span
+                className={`text-xs font-medium ${
+                  total === 100 ? "text-green-600" : "text-zinc-500"
+                }`}
+              >
+                {total}/100%
+              </span>
+            );
+          })()}
+        </div>
+
+        <ul className="mt-3 flex flex-col gap-2">
+          {event.criteria.map((c) => (
+            <li
+              key={c.id}
+              className="flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+            >
+              <span className="text-zinc-800 dark:text-zinc-200">
+                {c.name} <span className="text-zinc-500">({c.percentage}%)</span>
+              </span>
+              {event.status === "draft" && (
+                <button
+                  onClick={() => removeCriterion(c.id)}
+                  className="text-xs font-medium text-red-600 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              )}
+            </li>
+          ))}
+          {event.criteria.length === 0 && (
+            <p className="text-sm text-zinc-500">No criteria yet.</p>
+          )}
+        </ul>
+
+        {event.status === "draft" && (
+          <form onSubmit={addCriterion} className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Criterion name
+              <input
+                value={criterionName}
+                onChange={(e) => setCriterionName(e.target.value)}
+                placeholder="e.g. Design"
+                className="w-40 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Percentage
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={criterionPercentage}
+                onChange={(e) => setCriterionPercentage(e.target.value)}
+                className="w-24 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              Add
+            </button>
+          </form>
+        )}
+      </section>
 
       <div className="mt-10 grid gap-8 sm:grid-cols-2">
         <section>

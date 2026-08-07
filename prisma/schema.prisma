@@ -29,8 +29,23 @@ model Event {
   teamScoreBudget     Int @default(50)
   teamScoreMaxPerTeam Int @default(20)
 
-  teams  Team[]
-  jurors Juror[]
+  teams    Team[]
+  jurors   Juror[]
+  criteria Criterion[]
+}
+
+// A judging criterion jurors score teams on (e.g. "Design", 40%). Weighted
+// scores are combined into a single total on submission; only that total is
+// ever stored, so this model has no scores of its own.
+model Criterion {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name       String
+  percentage Int
+  createdAt  DateTime @default(now())
+
+  @@unique([eventId, name])
 }
 
 model Team {

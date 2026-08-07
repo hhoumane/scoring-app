@@ -12,6 +12,7 @@ export async function getEventBreakdown(eventId: string) {
         },
       },
       jurors: true,
+      criteria: { orderBy: { createdAt: "asc" } },
     },
   });
 
