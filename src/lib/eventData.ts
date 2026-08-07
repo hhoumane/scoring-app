@@ -55,6 +55,9 @@ export async function getEventBreakdown(eventId: string) {
     id: team.id,
     name: team.name,
     pointsAssigned: prismaSumGiven(event.teams, team.id),
+    hasVoted: event.teams.some((t) =>
+      t.teamScoresReceived.some((s) => s.fromTeamId === team.id)
+    ),
   }));
 
   return { event, ranking, jurorCompletion, teamCompletion };
