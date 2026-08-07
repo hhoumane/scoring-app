@@ -25,7 +25,13 @@ export async function GET(
 
   return NextResponse.json({
     team: { id: team.id, name: team.name },
-    event: { id: team.event.id, name: team.event.name, status: team.event.status },
+    event: {
+      id: team.event.id,
+      name: team.event.name,
+      status: team.event.status,
+      teamScoreBudget: team.event.teamScoreBudget,
+      teamScoreMaxPerTeam: team.event.teamScoreMaxPerTeam,
+    },
     otherTeams: team.event.teams
       .filter((t) => t.id !== team.id)
       .map((t) => ({ id: t.id, name: t.name })),

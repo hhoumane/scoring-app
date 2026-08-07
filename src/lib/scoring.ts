@@ -1,8 +1,8 @@
 export const JUROR_SCORE_MIN = 0;
 export const JUROR_SCORE_MAX = 100;
 
-export const TEAM_SCORE_BUDGET = 50;
-export const TEAM_SCORE_MAX_PER_TARGET = 20;
+export const DEFAULT_TEAM_SCORE_BUDGET = 50;
+export const DEFAULT_TEAM_SCORE_MAX_PER_TARGET = 20;
 
 export function isValidJurorScore(score: number): boolean {
   return (
@@ -12,12 +12,45 @@ export function isValidJurorScore(score: number): boolean {
   );
 }
 
-export function isValidTeamScoreValue(score: number): boolean {
-  return (
-    Number.isInteger(score) &&
-    score >= 0 &&
-    score <= TEAM_SCORE_MAX_PER_TARGET
-  );
+export function isValidTeamScoreValue(score: number, maxPerTarget: number): boolean {
+  return Number.isInteger(score) && score >= 0 && score <= maxPerTarget;
+}
+
+export type TeamScoreSettings = { teamScoreBudget: number; teamScoreMaxPerTeam: number };
+
+export type TeamScoreSettingsResult =
+  | { ok: true; settings: TeamScoreSettings }
+  | { ok: false; error: string };
+
+/** Validates organizer-supplied team-scoring settings, falling back to `fallback` when omitted. */
+export function parseTeamScoreSettings(
+  input: { teamScoreBudget?: unknown; teamScoreMaxPerTeam?: unknown },
+  fallback: TeamScoreSettings = {
+    teamScoreBudget: DEFAULT_TEAM_SCORE_BUDGET,
+    teamScoreMaxPerTeam: DEFAULT_TEAM_SCORE_MAX_PER_TARGET,
+  }
+): TeamScoreSettingsResult {
+  const budget =
+    input.teamScoreBudget === undefined ? fallback.teamScoreBudget : input.teamScoreBudget;
+  const maxPerTeam =
+    input.teamScoreMaxPerTeam === undefined
+      ? fallback.teamScoreMaxPerTeam
+      : input.teamScoreMaxPerTeam;
+
+  if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 1) {
+    return { ok: false, error: "Team point budget must be a positive integer." };
+  }
+  if (typeof maxPerTeam !== "number" || !Number.isInteger(maxPerTeam) || maxPerTeam < 1) {
+    return { ok: false, error: "Max points per team must be a positive integer." };
+  }
+  if (maxPerTeam > budget) {
+    return {
+      ok: false,
+      error: "Max points per team cannot be greater than the total point budget.",
+    };
+  }
+
+  return { ok: true, settings: { teamScoreBudget: budget, teamScoreMaxPerTeam: maxPerTeam } };
 }
 
 export type TeamScoreEntry = { toTeamId: string; score: number };
@@ -30,7 +63,9 @@ export type TeamScoreValidationResult =
 export function validateTeamScoreSubmission(
   fromTeamId: string,
   entries: TeamScoreEntry[],
-  validTeamIds: Set<string>
+  validTeamIds: Set<string>,
+  budget: number,
+  maxPerTarget: number
 ): TeamScoreValidationResult {
   const seen = new Set<string>();
   let total = 0;
@@ -47,19 +82,19 @@ export function validateTeamScoreSubmission(
     }
     seen.add(entry.toTeamId);
 
-    if (!isValidTeamScoreValue(entry.score)) {
+    if (!isValidTeamScoreValue(entry.score, maxPerTarget)) {
       return {
         ok: false,
-        error: `Score must be an integer between 0 and ${TEAM_SCORE_MAX_PER_TARGET}.`,
+        error: `Score must be an integer between 0 and ${maxPerTarget}.`,
       };
     }
     total += entry.score;
   }
 
-  if (total > TEAM_SCORE_BUDGET) {
+  if (total > budget) {
     return {
       ok: false,
-      error: `Total assigned points cannot exceed ${TEAM_SCORE_BUDGET}.`,
+      error: `Total assigned points cannot exceed ${budget}.`,
     };
   }
 

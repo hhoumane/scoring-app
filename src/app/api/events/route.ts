@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { parseTeamScoreSettings } from "@/lib/scoring";
 
 export async function GET() {
   const events = await prisma.event.findMany({
@@ -17,6 +18,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Event name is required." }, { status: 400 });
   }
 
-  const event = await prisma.event.create({ data: { name } });
+  const settings = parseTeamScoreSettings({
+    teamScoreBudget: body?.teamScoreBudget,
+    teamScoreMaxPerTeam: body?.teamScoreMaxPerTeam,
+  });
+  if (!settings.ok) {
+    return NextResponse.json({ error: settings.error }, { status: 400 });
+  }
+
+  const event = await prisma.event.create({ data: { name, ...settings.settings } });
   return NextResponse.json({ event }, { status: 201 });
 }

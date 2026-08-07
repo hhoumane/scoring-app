@@ -24,6 +24,11 @@ model Event {
   startedAt DateTime?
   closedAt  DateTime?
 
+  // Points each team has to distribute among other teams, and the max any
+  // single team may receive from another team. Organizer-configurable.
+  teamScoreBudget     Int @default(50)
+  teamScoreMaxPerTeam Int @default(20)
+
   teams  Team[]
   jurors Juror[]
 }

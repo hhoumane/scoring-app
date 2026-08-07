@@ -8,6 +8,8 @@ type Event = {
   id: string;
   name: string;
   status: "draft" | "active" | "closed";
+  teamScoreBudget: number;
+  teamScoreMaxPerTeam: number;
   teams: Team[];
   jurors: Juror[];
 };
@@ -58,6 +60,9 @@ export default function EventDetailPage({
   const [teamName, setTeamName] = useState("");
   const [jurorName, setJurorName] = useState("");
   const [tieInputs, setTieInputs] = useState<Record<string, string>>({});
+  const [editingSettings, setEditingSettings] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [maxPerTeamInput, setMaxPerTeamInput] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/events/${id}`);
@@ -136,6 +141,26 @@ export default function EventDetailPage({
     load();
   }
 
+  async function saveScoringSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    const res = await fetch(`/api/events/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teamScoreBudget: Number(budgetInput),
+        teamScoreMaxPerTeam: Number(maxPerTeamInput),
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      setError(json.error);
+      return;
+    }
+    setEditingSettings(false);
+    load();
+  }
+
   async function submitTieBreak(teamIds: string[]) {
     const ranks = teamIds
       .map((teamId) => ({ teamId, manualRank: Number(tieInputs[teamId]) }))
@@ -198,6 +223,66 @@ export default function EventDetailPage({
         )}
       </div>
 
+      <div className="mt-6 rounded-md border border-zinc-200 p-3 text-sm dark:border-zinc-800">
+        {!editingSettings ? (
+          <div className="flex items-center justify-between">
+            <p className="text-zinc-700 dark:text-zinc-300">
+              Team scoring: each team shares{" "}
+              <span className="font-medium">{event.teamScoreBudget} points</span>, up to{" "}
+              <span className="font-medium">{event.teamScoreMaxPerTeam}</span> per team.
+            </p>
+            {event.status === "draft" && (
+              <button
+                onClick={() => {
+                  setBudgetInput(String(event.teamScoreBudget));
+                  setMaxPerTeamInput(String(event.teamScoreMaxPerTeam));
+                  setEditingSettings(true);
+                }}
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={saveScoringSettings} className="flex flex-wrap items-end gap-4">
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Points each team can share
+              <input
+                type="number"
+                min={1}
+                value={budgetInput}
+                onChange={(e) => setBudgetInput(e.target.value)}
+                className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+              Max points per team
+              <input
+                type="number"
+                min={1}
+                value={maxPerTeamInput}
+                onChange={(e) => setMaxPerTeamInput(e.target.value)}
+                className="w-28 rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingSettings(false)}
+              className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            >
+              Cancel
+            </button>
+          </form>
+        )}
+      </div>
+
       <div className="mt-10 grid gap-8 sm:grid-cols-2">
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Teams</h2>
@@ -228,7 +313,7 @@ export default function EventDetailPage({
                   <div>
                     <p className="font-medium text-zinc-900 dark:text-zinc-50">{t.name}</p>
                     <p className="text-xs text-zinc-500">
-                      {completion?.pointsAssigned ?? 0}/50 points assigned
+                      {completion?.pointsAssigned ?? 0}/{event.teamScoreBudget} points assigned
                     </p>
                   </div>
                   <CopyLink path={`/team/${t.token}`} />

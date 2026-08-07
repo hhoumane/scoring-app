@@ -46,7 +46,9 @@ export async function POST(
   const validation = validateTeamScoreSubmission(
     team.id,
     parsed.map((e) => ({ toTeamId: e.teamId, score: e.score })),
-    validTeamIds
+    validTeamIds,
+    team.event.teamScoreBudget,
+    team.event.teamScoreMaxPerTeam
   );
   if (!validation.ok) {
     return NextResponse.json({ error: validation.error }, { status: 400 });

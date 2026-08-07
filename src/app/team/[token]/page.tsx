@@ -2,13 +2,16 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 
-const BUDGET = 50;
-const MAX_PER_TEAM = 20;
-
 type OtherTeam = { id: string; name: string };
 type TeamData = {
   team: { id: string; name: string };
-  event: { id: string; name: string; status: "draft" | "active" | "closed" };
+  event: {
+    id: string;
+    name: string;
+    status: "draft" | "active" | "closed";
+    teamScoreBudget: number;
+    teamScoreMaxPerTeam: number;
+  };
   otherTeams: OtherTeam[];
   scores: Record<string, number>;
 };
@@ -47,7 +50,9 @@ export default function TeamPage({
     () => Object.values(scores).reduce((sum, v) => sum + (Number(v) || 0), 0),
     [scores]
   );
-  const remaining = BUDGET - total;
+  const budget = data?.event.teamScoreBudget ?? 0;
+  const maxPerTeam = data?.event.teamScoreMaxPerTeam ?? 0;
+  const remaining = budget - total;
 
   async function save() {
     if (!data) return;
@@ -96,7 +101,7 @@ export default function TeamPage({
         {data.team.name}
       </h1>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        You have {BUDGET} points to distribute among other teams, up to {MAX_PER_TEAM} points
+        You have {budget} points to distribute among other teams, up to {maxPerTeam} points
         per team.
       </p>
 
@@ -112,7 +117,7 @@ export default function TeamPage({
         <p
           className={`mt-4 text-sm font-medium ${over ? "text-red-600" : "text-zinc-700 dark:text-zinc-300"}`}
         >
-          {remaining} of {BUDGET} points remaining
+          {remaining} of {budget} points remaining
         </p>
       )}
 
@@ -125,7 +130,7 @@ export default function TeamPage({
             <input
               type="number"
               min={0}
-              max={MAX_PER_TEAM}
+              max={maxPerTeam}
               disabled={locked}
               value={scores[team.id] ?? ""}
               onChange={(e) =>

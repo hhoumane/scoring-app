@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Event" ADD COLUMN     "teamScoreBudget" INTEGER NOT NULL DEFAULT 50,
+ADD COLUMN     "teamScoreMaxPerTeam" INTEGER NOT NULL DEFAULT 20;
